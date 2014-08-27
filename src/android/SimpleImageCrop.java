@@ -95,6 +95,56 @@ public class SimpleImageCrop extends CordovaPlugin {
 			});
 		}
     	
+    	if ("resize".equals(action)) {
+    		final String file = args.getString(0);
+			final boolean removeFile = args.optBoolean(1);
+			
+			final int quality = args.getInt(2);
+			final int maxWidth = args.getInt(3);
+			
+			cordova.getThreadPool().execute(new Runnable() {
+				public void run() {
+					
+					CordovaResourceApi resourceApi = webView.getResourceApi();
+					
+					Uri tmpSrc = Uri.parse(file);
+			        Uri sourceUri = resourceApi.remapUri(tmpSrc.getScheme() != null ? tmpSrc : Uri.fromFile(new File(file)));
+			        Log.d(LOG_TAG, "sourceUri: " + sourceUri);
+			       			        
+					try {
+						
+	                    File file = resourceApi.mapUriToFile(sourceUri);
+	                    BitmapFactory.Options options = new BitmapFactory.Options();
+	                    options.inSampleSize = 1;
+	                    options.inJustDecodeBounds = false;
+	                    
+	                    Bitmap bmp = BitmapFactory.decodeFile(file.getAbsolutePath(), options);
+	                    
+	                    float scale = (float) maxWidth / bmp.getWidth() ;
+	                    
+	                    bmp = getResizedBitmap(bmp, scale);
+	                    String base64 = encodeTobase64(bmp, quality);
+	                    
+	                    bmp.recycle();
+	                    
+	                    String result = "data:image/jpeg;base64,"+base64;
+	                    
+	                    if(removeFile) {
+		                    if(file.delete() == false) {
+		                    	callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, FILE_NOT_REMOVED_ERR));
+		                    	return;
+		                    }
+	                    }
+	                    
+	                    callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
+	                    
+					} catch (Exception e) {
+						Log.d(LOG_TAG, "crop error: "+e.getMessage());
+						callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, e.getMessage()));
+					}
+				}
+			});
+    	}
     	return true;
 	}
     

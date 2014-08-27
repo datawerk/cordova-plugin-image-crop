@@ -29,4 +29,5 @@ typedef int SimpleImageCropError;
 
 @interface SimpleImageCrop : CDVPlugin {}
 - (void)crop:(CDVInvokedUrlCommand*)command;
+- (void)resize:(CDVInvokedUrlCommand*)command;
 @end

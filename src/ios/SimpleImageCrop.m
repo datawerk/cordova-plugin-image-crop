@@ -115,6 +115,84 @@
     
 }
 
+- (void)resize:(CDVInvokedUrlCommand *)command {
+    
+    NSString* file = [command.arguments objectAtIndex:0];
+    BOOL removeFile = [[command.arguments objectAtIndex:1 withDefault:[NSNumber numberWithBool:NO]] boolValue]; // allow self-signed certs
+    
+    CDVPluginResult* result = nil;
+    SimpleImageCropError errorCode = 0;
+    
+    CDVFilesystemURL *fsURL = [CDVFilesystemURL fileSystemURLWithString:file];
+    if (!fsURL) {
+        errorCode = FILE_NOT_FOUND_ERR;
+        NSLog(@"SimpleImageCrop Error: Invalid file path or URL %@", file);
+    }
+    
+    if (errorCode > 0) {
+        result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:errorCode];
+        [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+        return;
+    }
+    
+    [self.commandDelegate runInBackground:^{
+        
+        CDVFile *filePlugin = [self.commandDelegate getCommandInstance:@"File"];
+        NSObject<CDVFileSystem> *fs = [filePlugin filesystemForURL:fsURL];
+        NSString *path = [fs filesystemPathForURL:fsURL];
+        
+        NSLog(@"SimpleImageCrop load image from: %@", path);
+        
+        // Get the file manager
+        NSFileManager* fMgr = [NSFileManager defaultManager];
+        NSString* appFile = path; // [ self getFullPath: argPath];
+        
+        BOOL bExists = [fMgr fileExistsAtPath:appFile];
+        if(bExists == false) {
+            CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:FILE_NOT_FOUND_ERR];
+            [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+            return;
+        }
+        
+        UIImage *image = [UIImage imageWithContentsOfFile:path];
+        
+        float quality = [[command.arguments objectAtIndex:2] floatValue] / 100.0f;
+        int maxWidth = [[command.arguments objectAtIndex:3] intValue];
+        
+        UIImage *croppedImageFinal = [SimpleImageCrop imageWithImage:image scaledToWidth:maxWidth];
+        
+        NSData *croppedImageData = UIImageJPEGRepresentation(croppedImageFinal, quality);
+        NSString *mimeType = @"image/jpeg";
+        
+        NSLog(@"SimpleImageCrop croppedImageData size: %lu", (unsigned long)croppedImageData.length);
+        
+        NSString* output = [NSString stringWithFormat:@"data:%@;base64,%@", mimeType, [croppedImageData base64EncodedString]];
+        
+        SimpleImageCropError errorCode = 0;
+        
+        if(removeFile) {
+            CDVPluginResult* removeFileResult = [fs removeFileAtURL:fsURL];
+            NSLog(@"SimpleImageCrop removeFileResult: %@", removeFileResult.status);
+            if([removeFileResult.status intValue] != CDVCommandStatus_OK) {
+                errorCode = FILE_NOT_REMOVED_ERR;
+                NSLog(@"SimpleImageCrop Error: file not removed for or URL %@", file);
+            }
+        }
+        
+        CDVPluginResult* result;
+        if (errorCode > 0) {
+            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:errorCode];
+            [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+            return;
+        } else {
+            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:output];
+            [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+        }
+        
+    }];
+    
+}
+
 +(UIImage*)imageWithImage: (UIImage*) sourceImage scaledToWidth: (float) i_width
 {
     float oldWidth = sourceImage.size.width;
