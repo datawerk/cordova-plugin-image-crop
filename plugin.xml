@@ -32,19 +32,18 @@
     </js-module>
 
     <!-- android -->
-    <!--<platform name="android">
+	<platform name="android">
         <config-file target="res/xml/config.xml" parent="/*">
-            <feature name="SimpleDataTransfer" >
-                <param name="android-package" value="de.datawerk.cordova.plugin.data.SimpleDataTransfer"/>
+            <feature name="SimpleImageCrop" >
+                <param name="android-package" value="de.datawerk.cordova.plugin.image.SimpleImageCrop"/>
             </feature>
         </config-file>
 
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
         </config-file>
-        <source-file src="src/android/SimpleDataTransfer.java" target-dir="src/de/datawerk/cordova/plugin/data" />
-    	<source-file src="src/android/SimpleDataProgressResult.java" target-dir="src/de/datawerk/cordova/plugin/data" />
-    </platform>-->
+        <source-file src="src/android/SimpleImageCrop.java" target-dir="src/de/datawerk/cordova/plugin/image" />
+    </platform>
 
     <!-- ios -->
     <platform name="ios">
