@@ -21,6 +21,12 @@
 #import <Cordova/CDVPlugin.h>
 #import "CDVFile.h"
 
+enum SimpleImageCropError {
+    FILE_NOT_FOUND_ERR = 1,
+    FILE_NOT_REMOVED_ERR = 2,
+};
+typedef int SimpleImageCropError;
+
 @interface SimpleImageCrop : CDVPlugin {}
 - (void)crop:(CDVInvokedUrlCommand*)command;
 @end
