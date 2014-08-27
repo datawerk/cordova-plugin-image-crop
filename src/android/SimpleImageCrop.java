@@ -1,55 +1,21 @@
 package de.datawerk.cordova.plugin.image;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
-import java.io.FilterInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URLConnection;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.security.spec.AlgorithmParameterSpec;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.Inflater;
-
-import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaResourceApi;
-import org.apache.cordova.CordovaResourceApi.OpenForReadResult;
 import org.apache.cordova.PluginResult;
-import org.apache.cordova.file.FileUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.net.Uri;
 import android.util.Base64;
 import android.util.Log;
-import android.webkit.CookieManager;
-
-import com.neilalexander.jnacl.NaCl;
 
 public class SimpleImageCrop extends CordovaPlugin {
 
@@ -58,9 +24,100 @@ public class SimpleImageCrop extends CordovaPlugin {
     public static int FILE_NOT_FOUND_ERR = 1;
     public static int FILE_NOT_REMOVED_ERR = 2;
     @Override
-    public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
+    public boolean execute(String action, final JSONArray args, final CallbackContext callbackContext) throws JSONException {
 	
-	return true;
+    	if ("crop".equals(action)) {
+			Log.d(LOG_TAG, "crop called");
+			
+			final String file = args.getString(0);
+			final boolean removeFile = args.optBoolean(1);
+			
+			final int x = args.getInt(2);
+			final int y = args.getInt(3);
+			final int width = args.getInt(4);
+			final int height = args.getInt(5);
+			
+			final int quality = args.getInt(6);
+			final int maxWidth = args.getInt(7);
+			
+			cordova.getThreadPool().execute(new Runnable() {
+				public void run() {
+					
+					CordovaResourceApi resourceApi = webView.getResourceApi();
+					
+					Uri tmpSrc = Uri.parse(file);
+			        Uri sourceUri = resourceApi.remapUri(tmpSrc.getScheme() != null ? tmpSrc : Uri.fromFile(new File(file)));
+			        Log.d(LOG_TAG, "sourceUri: " + sourceUri);
+			       			        
+					try {
+						
+	                    File file = resourceApi.mapUriToFile(sourceUri);
+	                    BitmapFactory.Options options = new BitmapFactory.Options();
+	                    options.inSampleSize = 1;
+	                    options.inJustDecodeBounds = false;
+	                    
+	                    //Log.d(LOG_TAG, "file path: " + file.getAbsolutePath());
+	                    
+	                    Bitmap bmpOrig = BitmapFactory.decodeFile(file.getAbsolutePath(), options);
+	                    Bitmap bmp = Bitmap.createBitmap(bmpOrig, x, y, width, height);
+	                    
+	                    bmpOrig.recycle();
+	                    
+	                    //Log.d(LOG_TAG, "width: " + width);
+	                    //Log.d(LOG_TAG, "height: " + height);
+	                    //Log.d(LOG_TAG, "maxWidth: " + maxWidth);
+	                    
+	                    float scale = (float) maxWidth / width ;
+	                    
+	                    //Log.d(LOG_TAG, "scale: " + scale);
+	                    
+	                    bmp = getResizedBitmap(bmp, scale);
+	                    String base64 = encodeTobase64(bmp, quality);
+	                    
+	                    bmp.recycle();
+	                    
+	                    String result = "data:image/jpeg;base64,"+base64;
+	                    
+	                    if(removeFile) {
+		                    if(file.delete() == false) {
+		                    	callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, FILE_NOT_REMOVED_ERR));
+		                    	return;
+		                    }
+	                    }
+	                    
+	                    callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
+	                    
+					} catch (Exception e) {
+						Log.d(LOG_TAG, "crop error: "+e.getMessage());
+						callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, e.getMessage()));
+					}
+				}
+			});
+		}
+    	
+    	return true;
 	}
+    
+    private Bitmap getResizedBitmap(Bitmap bm, float factor) {
+        int width = bm.getWidth();
+        int height = bm.getHeight();
+        // create a matrix for the manipulation
+        Matrix matrix = new Matrix();
+        // resize the bit map
+        matrix.postScale(factor, factor);
+        // recreate the new Bitmap
+        Bitmap resizedBitmap = Bitmap.createBitmap(bm, 0, 0, width, height, matrix, false);
+        return resizedBitmap;
+    }
+    
+    public static String encodeTobase64(Bitmap image, int quality)
+    {
+        Bitmap immagex=image;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();  
+        immagex.compress(Bitmap.CompressFormat.JPEG, quality, baos);
+        byte[] b = baos.toByteArray();
+        String imageEncoded = Base64.encodeToString(b,Base64.DEFAULT);
 
+        return imageEncoded;
+    }
 }
