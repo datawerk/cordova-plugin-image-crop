@@ -24,33 +24,34 @@ public class SimpleImageCrop extends CordovaPlugin {
     public static int FILE_NOT_FOUND_ERR = 1;
     public static int FILE_NOT_REMOVED_ERR = 2;
     @Override
-    public boolean execute(String action, final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+    public boolean execute(String action, final String rawArgs, final CallbackContext callbackContext) throws JSONException {
 	
     	if ("crop".equals(action)) {
 			Log.d(LOG_TAG, "crop called");
 			
-			final String file = args.getString(0);
-			final boolean removeFile = args.optBoolean(1);
-			
-			final int x = args.getInt(2);
-			final int y = args.getInt(3);
-			final int width = args.getInt(4);
-			final int height = args.getInt(5);
-			
-			final int quality = args.getInt(6);
-			final int maxWidth = args.getInt(7);
-			
 			cordova.getThreadPool().execute(new Runnable() {
 				public void run() {
 					
-					CordovaResourceApi resourceApi = webView.getResourceApi();
-					
-					Uri tmpSrc = Uri.parse(file);
-			        Uri sourceUri = resourceApi.remapUri(tmpSrc.getScheme() != null ? tmpSrc : Uri.fromFile(new File(file)));
-			        Log.d(LOG_TAG, "sourceUri: " + sourceUri);
-			       			        
 					try {
+					
+						JSONArray args = new JSONArray(rawArgs);
+						String filename = args.getString(0);
+						boolean removeFile = args.optBoolean(1);
 						
+						int x = args.getInt(2);
+						int y = args.getInt(3);
+						int width = args.getInt(4);
+						int height = args.getInt(5);
+						
+						int quality = args.getInt(6);
+						int maxWidth = args.getInt(7);
+						
+						CordovaResourceApi resourceApi = webView.getResourceApi();
+						
+						Uri tmpSrc = Uri.parse(filename);
+				        Uri sourceUri = resourceApi.remapUri(tmpSrc.getScheme() != null ? tmpSrc : Uri.fromFile(new File(filename)));
+				        Log.d(LOG_TAG, "sourceUri: " + sourceUri);
+				        
 	                    File file = resourceApi.mapUriToFile(sourceUri);
 	                    BitmapFactory.Options options = new BitmapFactory.Options();
 	                    options.inSampleSize = 1;
@@ -96,23 +97,26 @@ public class SimpleImageCrop extends CordovaPlugin {
 		}
     	
     	if ("resize".equals(action)) {
-    		final String file = args.getString(0);
-			final boolean removeFile = args.optBoolean(1);
-			
-			final int quality = args.getInt(2);
-			final int maxWidth = args.getInt(3);
-			
-			cordova.getThreadPool().execute(new Runnable() {
+    		
+    		cordova.getThreadPool().execute(new Runnable() {
 				public void run() {
-					
-					CordovaResourceApi resourceApi = webView.getResourceApi();
-					
-					Uri tmpSrc = Uri.parse(file);
-			        Uri sourceUri = resourceApi.remapUri(tmpSrc.getScheme() != null ? tmpSrc : Uri.fromFile(new File(file)));
-			        Log.d(LOG_TAG, "sourceUri: " + sourceUri);
-			       			        
+			
 					try {
+					
+						JSONArray args = new JSONArray(rawArgs);
+			    		
+			    		final String filename = args.getString(0);
+						final boolean removeFile = args.optBoolean(1);
 						
+						final int quality = args.getInt(2);
+						final int maxWidth = args.getInt(3);
+						
+						CordovaResourceApi resourceApi = webView.getResourceApi();
+						
+						Uri tmpSrc = Uri.parse(filename);
+				        Uri sourceUri = resourceApi.remapUri(tmpSrc.getScheme() != null ? tmpSrc : Uri.fromFile(new File(filename)));
+				        Log.d(LOG_TAG, "sourceUri: " + sourceUri);
+				        
 	                    File file = resourceApi.mapUriToFile(sourceUri);
 	                    BitmapFactory.Options options = new BitmapFactory.Options();
 	                    options.inSampleSize = 1;
